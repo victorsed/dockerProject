@@ -1,0 +1,113 @@
+version: '3.9'
+services:
+
+  user.data:
+    image: redis:6.2.1
+    networks:
+      - apis
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    container_name: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    networks:
+      - apis
+      - backend
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  sql.data:
+    image: ./appscore/Database/Dockerfile   # A vérifier
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    volumes:
+      - "../volumes/mssqlsrv2017:/var/opt/mssql/data" 
+    networks:
+      - apis
+      - db
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD", "sqlcmd", "-S", "localhost", "-U", "sa", "-P", "root", "-Q", "SELECT 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  applicants.api:
+    image: applicants
+    environment:
+      ConnectionStrings:Server=sql.data;User=user;Password=password;Database=db;
+      HostRabbitMQ:rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - backend
+      - db
+      - apis
+    ports:
+      - "8081:80"
+
+  jobs.api:
+    image: jobs
+    environment:
+      ConnectionStrings:Server=sql.data;Database=db;User Id=user;Password=password;
+      HostRabbitMQ:rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - backend
+      - apis
+    ports:
+      - "8083:80"
+
+  identity.api:
+    image: identity
+    environment:
+      RedisHost:user.data:6379
+      HostRabbitMQ:rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - backend
+      - apis
+    ports:
+      - "8084:80"
+
+  web:
+    image: web
+    environment:
+      HostRabbitMQ:rabbitmq
+    depends_on:
+      - applicants.api
+      - jobs.api
+      - identity.api
+    networks:
+      - apis
+    ports:
+      - "8080:80"
+
+
+
+networks:
+  frontend:
+    name: frontend
+  apis:
+    name: apis
+    external: false
+  backend:
+    name: backend
+    external: true # A vérifier, surpasse le external: false ?
+  db:
+    name: db
+    external: false
