@@ -1,13 +1,13 @@
 FROM mcr.microsoft.com/mssql/server:2017-latest
 
 ENV ACCEPT_EULA=Y
-ENV MSSQL_SA_PASSWORD=password
+ENV MSSQL_SA_PASSWORD=Pass@word
 
 # Mise à jour du système d'exploitation Ubuntu 16.04
 RUN apt-get update && apt-get -y upgrade
 
 # Copie des 3 fichiers vers le dossier /tmp/database/
-COPY entrypoint.sh SqlCmdStartup.sh SqlCmdScript.sql /tmp/database/
+COPY ./appscore/Database/entrypoint.sh ./appscore/Database/SqlCmdStartup.sh ./appscore/Database/SqlCmdScript.sql /tmp/database/
 RUN chmod +x /tmp/database/entrypoint.sh && chmod +x /tmp/database/SqlCmdStartup.sh
 CMD cd /tmp/database/ && ./entrypoint.sh 
 

@@ -9,27 +9,29 @@ services:
       - "6379:6379"
 
   rabbitmq:
-    image: rabbitmq:3.9-management
+    image: rabbitmq:3.10-management
     container_name: rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
     networks:
       - apis
       - backend
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
 
   sql.data:
-    image: ./appscore/Database/Dockerfile   # A vérifier
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+    build:
+      context: ./
+      dockerfile: ./appscore/Database/Dockerfile
     volumes:
-      - "../volumes/mssqlsrv2017:/var/opt/mssql/data" 
+      - D:\ProgramData\DockerDesktop\volumes\mssqlsrv2017:/var/opt/mssql/data
     networks:
       - apis
       - db
@@ -42,10 +44,10 @@ services:
       retries: 5
 
   applicants.api:
-    image: applicants
+    image: vicy20/applicants-api:latest
     environment:
-      ConnectionStrings:Server=sql.data;User=user;Password=password;Database=db;
-      HostRabbitMQ:rabbitmq
+      - ConnectionString=Server=sql.data;Database=dotnetgigs.applicants;User=sa;Password=Pass@word
+      - HostRabbitmq=rabbitmq
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -56,11 +58,11 @@ services:
     ports:
       - "8081:80"
 
-  jobs.api:
-    image: jobs
+  service-api-jobs:
+    image: vicy20/jobs-api:latest
     environment:
-      ConnectionStrings:Server=sql.data;Database=db;User Id=user;Password=password;
-      HostRabbitMQ:rabbitmq
+      - ConnectionString=Server=sql.data;Database=dotnetgigs.jobs;User=sa;Password=Pass@word
+      - HostRabbitmq=rabbitmq
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -70,11 +72,11 @@ services:
     ports:
       - "8083:80"
 
-  identity.api:
-    image: identity
+  service-api-identity:
+    image: vicy20/identity-api:latest
     environment:
-      RedisHost:user.data:6379
-      HostRabbitMQ:rabbitmq
+      - RedisHost=user.data:6379
+      - HostRabbitmq=rabbitmq
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -85,19 +87,20 @@ services:
       - "8084:80"
 
   web:
-    image: web
+    build:
+      context: ./
+      dockerfile: ./appscore/Web/Dockerfile
     environment:
-      HostRabbitMQ:rabbitmq
+      - HostRabbitmq=rabbitmq
     depends_on:
       - applicants.api
-      - jobs.api
-      - identity.api
+      - service-api-jobs
+      - service-api-identity
     networks:
+      - frontend
       - apis
     ports:
       - "8080:80"
-
-
 
 networks:
   frontend:
@@ -107,7 +110,7 @@ networks:
     external: false
   backend:
     name: backend
-    external: true # A vérifier, surpasse le external: false ?
+    external : false
   db:
     name: db
     external: false
