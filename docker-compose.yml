@@ -4,7 +4,7 @@ services:
   user.data:
     image: redis:6.2.1
     networks:
-      - backend
+      - db_redis
 
   rabbitmq:
     image: rabbitmq:3.10-management
@@ -30,7 +30,7 @@ services:
     volumes:
       - D:\ProgramData\DockerDesktop\volumes\mssqlsrv2017:/var/opt/mssql/data
     networks:
-      - db
+      - db_mssql2017
     healthcheck:
       test: ["CMD", "sqlcmd", "-S", "localhost", "-U", "sa", "-P", "root", "-Q", "SELECT 1"]
       interval: 30s
@@ -47,7 +47,7 @@ services:
         condition: service_healthy
     networks:
       - backend
-      - db
+      - db_mssql2017
 
   service-api-jobs:
     image: vicy20/jobs-api:latest
@@ -59,7 +59,7 @@ services:
         condition: service_healthy
     networks:
       - backend
-      - db
+      - db_mssql2017
 
   service-api-identity:
     image: vicy20/identity-api:latest
@@ -71,6 +71,7 @@ services:
         condition: service_healthy
     networks:
       - backend
+      - db_redis
 
   web:
     build:
@@ -94,6 +95,9 @@ networks:
   backend:
     name: backend
     external : false
-  db:
-    name: db
+  db_mssql2017:
+    name: db_mssql2017
+    external: false
+  db_redis:
+    name: db_redis
     external: false
