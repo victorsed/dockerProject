@@ -4,9 +4,7 @@ services:
   user.data:
     image: redis:6.2.1
     networks:
-      - apis
-    ports:
-      - "6379:6379"
+      - backend
 
   rabbitmq:
     image: rabbitmq:3.10-management
@@ -15,10 +13,9 @@ services:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     networks:
-      - apis
       - backend
+      - frontend
     ports:
-      - "5672:5672"
       - "15672:15672"
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
@@ -33,10 +30,7 @@ services:
     volumes:
       - D:\ProgramData\DockerDesktop\volumes\mssqlsrv2017:/var/opt/mssql/data
     networks:
-      - apis
       - db
-    ports:
-      - "1433:1433"
     healthcheck:
       test: ["CMD", "sqlcmd", "-S", "localhost", "-U", "sa", "-P", "root", "-Q", "SELECT 1"]
       interval: 30s
@@ -54,9 +48,6 @@ services:
     networks:
       - backend
       - db
-      - apis
-    ports:
-      - "8081:80"
 
   service-api-jobs:
     image: vicy20/jobs-api:latest
@@ -68,9 +59,7 @@ services:
         condition: service_healthy
     networks:
       - backend
-      - apis
-    ports:
-      - "8083:80"
+      - db
 
   service-api-identity:
     image: vicy20/identity-api:latest
@@ -82,9 +71,6 @@ services:
         condition: service_healthy
     networks:
       - backend
-      - apis
-    ports:
-      - "8084:80"
 
   web:
     build:
@@ -98,16 +84,13 @@ services:
       - service-api-identity
     networks:
       - frontend
-      - apis
+      - backend
     ports:
       - "8080:80"
 
 networks:
   frontend:
     name: frontend
-  apis:
-    name: apis
-    external: false
   backend:
     name: backend
     external : false
