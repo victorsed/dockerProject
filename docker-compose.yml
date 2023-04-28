@@ -64,6 +64,7 @@ services:
   service-api-identity:
     image: vicy20/identity-api:latest
     environment:
+      - ConnectionString=Server=sql.data;Database=dotnetgigs.identity;User=sa;Password=Pass@word
       - RedisHost=user.data:6379
       - HostRabbitmq=rabbitmq
     depends_on:
@@ -71,6 +72,7 @@ services:
         condition: service_healthy
     networks:
       - backend
+      - db_mssql2017
       - db_redis
 
   web:
